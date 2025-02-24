@@ -13,7 +13,7 @@ class GuardrailSettings(BaseModel):
     guardrailVersion: str = "DRAFT"
 
 class GenerationSettings(BaseModel):
-    temperature: float = Field(default=0.7, ge=0, le=1, description="Controls randomness in the output")
+    temperature: float = Field(default=0.2, ge=0, le=1, description="Controls randomness in the output")
     top_p: float = Field(default=0.999, ge=0, le=1, description="Nucleus sampling parameter")
     top_k: int = Field(default=250, ge=0, description="Top-k sampling parameter")
     max_tokens: int = Field(default=2048, ge=0, description="Maximum number of tokens to generate")

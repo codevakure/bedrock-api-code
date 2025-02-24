@@ -133,6 +133,64 @@ class KBCostMetrics:
                 except ValueError:
                     pass
 
+            # Print debug info about the response structure
+            print(f"DEBUG - Response structure keys: {list(response_body.keys() if isinstance(response_body, dict) else [])}")
+            
+            # Handle Bedrock's retrieve_and_generate API response
+            if provider_enum == ModelProvider.AMAZON or (isinstance(provider, str) and "amazon" in provider.lower()):
+                # The Bedrock retrieve_and_generate API might have a different structure
+                
+                # Check for metrics in retrieveAndGenerateResponse (for newer API versions)
+                if "retrieveAndGenerateResponse" in response_body and isinstance(response_body["retrieveAndGenerateResponse"], dict):
+                    metrics = response_body["retrieveAndGenerateResponse"].get("metrics", {})
+                    
+                    if isinstance(metrics, dict):
+                        if "promptTokenCount" in metrics and "completionTokenCount" in metrics:
+                            usage["input_tokens"] = max(1, metrics.get("promptTokenCount", 1))
+                            usage["output_tokens"] = max(1, metrics.get("completionTokenCount", 1))
+                            print(f"DEBUG - Found token usage in retrieveAndGenerateResponse.metrics: {usage}")
+                            return usage
+                
+                # Check for usage directly in the response
+                if "usage" in response_body and isinstance(response_body["usage"], dict):
+                    if "inputTokens" in response_body["usage"] and "outputTokens" in response_body["usage"]:
+                        usage["input_tokens"] = max(1, response_body["usage"].get("inputTokens", 1))
+                        usage["output_tokens"] = max(1, response_body["usage"].get("outputTokens", 1))
+                        print(f"DEBUG - Found token usage in usage (inputTokens/outputTokens): {usage}")
+                        return usage
+                        
+                    if "prompt_tokens" in response_body["usage"] and "completion_tokens" in response_body["usage"]:
+                        usage["input_tokens"] = max(1, response_body["usage"].get("prompt_tokens", 1))
+                        usage["output_tokens"] = max(1, response_body["usage"].get("completion_tokens", 1))
+                        print(f"DEBUG - Found token usage in usage (prompt_tokens/completion_tokens): {usage}")
+                        return usage
+                
+                # Check for responseMetadata
+                if "responseMetadata" in response_body and isinstance(response_body["responseMetadata"], dict):
+                    if "tokenUsage" in response_body["responseMetadata"]:
+                        token_usage = response_body["responseMetadata"]["tokenUsage"]
+                        if isinstance(token_usage, dict):
+                            if "promptTokens" in token_usage and "completionTokens" in token_usage:
+                                usage["input_tokens"] = max(1, token_usage.get("promptTokens", 1))
+                                usage["output_tokens"] = max(1, token_usage.get("completionTokens", 1))
+                                print(f"DEBUG - Found token usage in responseMetadata.tokenUsage: {usage}")
+                                return usage
+                
+                # For Bedrock, if we still can't find token usage, estimate based on text length
+                if "output" in response_body and "text" in response_body["output"]:
+                    output_text = response_body["output"]["text"]
+                    output_tokens = KBCostMetrics.estimate_tokens(output_text)
+                    # Estimate input tokens as roughly proportional to output tokens
+                    input_tokens = max(1, int(output_tokens * 0.5))  # Assume input is about half the size of output
+                    
+                    usage["output_tokens"] = max(1, output_tokens)
+                    usage["input_tokens"] = max(1, input_tokens)
+                    usage["total_tokens"] = usage["input_tokens"] + usage["output_tokens"]
+                    
+                    print(f"DEBUG - Estimated token usage from text length: {usage}")
+                    return usage
+            
+            # Original provider-specific handling
             if provider_enum == ModelProvider.ANTHROPIC:
                 usage["input_tokens"] = max(1, response_body.get("usage", {}).get("input_tokens", 1))
                 usage["output_tokens"] = max(1, response_body.get("usage", {}).get("output_tokens", 1))
@@ -160,15 +218,30 @@ class KBCostMetrics:
 
             # Calculate total tokens if not already set
             usage["total_tokens"] = max(2, usage["input_tokens"] + usage["output_tokens"])
-
+            
+            # If we're still using minimum values, make a more significant estimate
+            if usage["input_tokens"] == 1 and usage["output_tokens"] == 1:
+                # This is a fallback - use the prompt length to estimate input tokens
+                # For Bedrock retrieve_and_generate, if we can find the input text
+                if isinstance(response_body, dict) and "input" in response_body and "text" in response_body["input"]:
+                    input_text = response_body["input"]["text"]
+                    input_tokens = KBCostMetrics.estimate_tokens(input_text)
+                    usage["input_tokens"] = max(1, input_tokens)
+                    
+                    # If we can find the output text
+                    if "output" in response_body and "text" in response_body["output"]:
+                        output_text = response_body["output"]["text"]
+                        output_tokens = KBCostMetrics.estimate_tokens(output_text)
+                        usage["output_tokens"] = max(1, output_tokens)
+                    else:
+                        # Estimate output tokens as proportional to input
+                        usage["output_tokens"] = max(1, int(input_tokens * 1.5))  # Assume output is larger than input
+                    
+                    usage["total_tokens"] = usage["input_tokens"] + usage["output_tokens"]
+                    print(f"DEBUG - Estimated token usage from input/output text: {usage}")
+            
             return usage
 
         except Exception as e:
             logger.error(f"Error getting token usage: {str(e)}")
             return usage
-
-    @staticmethod
-    def validate_token_limit(token_count: int) -> int:
-        """Ensure token count is within retrieval operation limits."""
-        MAX_RETRIEVE_GENERATE_TOKENS = 65536
-        return min(max(1, token_count), MAX_RETRIEVE_GENERATE_TOKENS)
