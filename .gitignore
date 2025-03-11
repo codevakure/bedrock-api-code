@@ -2,6 +2,29 @@
 .env
 .env.*
 
+# Documentation temp files
+temp_docs_src/
+docs/
+
+# Testing cache and coverage files
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+
+# Pre-commit
+pre-commit.sh
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
 # Python
 __pycache__/
 *.py[cod]

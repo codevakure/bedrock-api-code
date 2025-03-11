@@ -103,6 +103,8 @@ clean:
 	-@$(RM_VENV) 2>/dev/null || true
 	@echo "Removing cache files..."
 	-@$(RM_CACHE)
+	@echo "Removing temp_docs_src directory if it exists..."
+	-@rm -rf temp_docs_src 2>/dev/null || true
 	@echo "Cleanup complete"
 
 # Show help
