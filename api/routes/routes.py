@@ -11,6 +11,7 @@ from api.models.models import GenerationSettings
 from services.sync_service import SyncService
 from services.knowledgebase_service import KnowledgebaseService
 from services.knowledgebase_metrics import KnowledgebaseMetricsService
+from api.routes.schema_routes import schema_router
 
 # Parent router with a common prefix
 api_router = APIRouter(prefix="/ai")
@@ -113,7 +114,7 @@ async def list_all_jobs():
    return await SyncService.list_all_jobs()
 
 # Health check route
-@health_router.get("/health")
+@health_router.get("")
 async def health_check():
    return JSONResponse({
        "status": "healthy",
@@ -128,3 +129,4 @@ api_router.include_router(query_router)
 api_router.include_router(sync_router)
 api_router.include_router(health_router)
 api_router.include_router(knowledgebase_router)
+api_router.include_router(schema_router) 

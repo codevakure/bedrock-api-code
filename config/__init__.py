@@ -12,3 +12,9 @@ from config.aws_config import (
 )
 from config.settings import settings
 from config.logging_config import logger
+from config.dynamodb_config import (
+    get_dynamodb_resource,
+    get_schemas_table,
+    get_table,
+    SCHEMAS_TABLE_NAME
+)

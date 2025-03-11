@@ -18,3 +18,12 @@ from api.models.kb_model_config import (
     KBModelConfig,
     KBModelConfigs
 )
+
+from api.models.schema_models import (
+    DatabaseConnection,
+    SchemaDetailResponse,
+    SchemaInfo,
+    SchemaMetadata,
+    SchemaRequest,
+    SchemaResponse
+)
