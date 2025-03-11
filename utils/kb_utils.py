@@ -1,12 +1,18 @@
 import json
-from typing import Dict, Any
-from decimal import Decimal, ROUND_HALF_UP
-from api.models.kb_model_config import KBModelConfigs, ModelProvider
-from api.models.models import GenerationSettings
-from typing import Optional, Dict, Any, AsyncGenerator, List
-from api.models.kb_model_config import KBModelConfigs, ModelProvider, ModelFamilyMapper, KBModelConfig
+from decimal import ROUND_HALF_UP, Decimal
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
 from fastapi import HTTPException
+
+from api.models.kb_model_config import (
+    KBModelConfig,
+    KBModelConfigs,
+    ModelFamilyMapper,
+    ModelProvider,
+)
+from api.models.models import GenerationSettings
 from config.logging_config import logger
+
 
 class KBUtils:
     @staticmethod
@@ -15,11 +21,11 @@ class KBUtils:
         try:
             # Get model configuration
             model_config = KBModelConfigs.get_config(model_arn)
-            
+
             # Update config with request settings if provided
             if settings:
                 model_config.update_from_settings(settings)
-            
+
             # Format request based on provider
             if model_config.provider == ModelProvider.ANTHROPIC:
                 return {
@@ -29,7 +35,7 @@ class KBUtils:
                     "top_p": model_config.top_p,
                     "top_k": model_config.top_k,
                     "max_tokens": model_config.max_tokens,
-                    "stop_sequences": model_config.stop_sequences
+                    "stop_sequences": model_config.stop_sequences,
                 }
             elif model_config.provider == ModelProvider.META:
                 return {
@@ -37,7 +43,7 @@ class KBUtils:
                     "temperature": model_config.temperature,
                     "top_p": model_config.top_p,
                     "max_tokens": model_config.max_tokens,
-                    "stop_sequences": model_config.stop_sequences
+                    "stop_sequences": model_config.stop_sequences,
                 }
             elif model_config.provider == ModelProvider.COHERE:
                 return {
@@ -46,7 +52,7 @@ class KBUtils:
                     "p": model_config.top_p,
                     "k": model_config.top_k,
                     "max_tokens": model_config.max_tokens,
-                    "stop_sequences": model_config.stop_sequences
+                    "stop_sequences": model_config.stop_sequences,
                 }
             elif model_config.provider == ModelProvider.MISTRAL:
                 return {
@@ -55,25 +61,20 @@ class KBUtils:
                         "temperature": model_config.temperature,
                         "top_p": model_config.top_p,
                         "max_tokens": model_config.max_tokens,
-                        "stop": model_config.stop_sequences
-                    }
+                        "stop": model_config.stop_sequences,
+                    },
                 }
             elif model_config.provider == ModelProvider.AMAZON:
                 # Handle different Amazon models (Nova vs Titan)
                 model_family = ModelFamilyMapper.get_family(model_config.model_id)
-                
+
                 if "nova" in model_family:
                     return {
-                        "messages": [
-                            {
-                                "role": "user",
-                                "content": [{"text": prompt}]
-                            }
-                        ],
+                        "messages": [{"role": "user", "content": [{"text": prompt}]}],
                         "temperature": model_config.temperature,
                         "top_p": model_config.top_p,
                         "max_tokens": model_config.max_tokens,
-                        "stop": model_config.stop_sequences
+                        "stop": model_config.stop_sequences,
                     }
                 else:  # Titan models
                     return {
@@ -83,8 +84,8 @@ class KBUtils:
                             "temperature": model_config.temperature,
                             "topP": model_config.top_p,
                             "topK": model_config.top_k,
-                            "stopSequences": model_config.stop_sequences
-                        }
+                            "stopSequences": model_config.stop_sequences,
+                        },
                     }
             else:
                 # Default format for unknown providers
@@ -94,9 +95,9 @@ class KBUtils:
                     "top_p": model_config.top_p,
                     "top_k": model_config.top_k,
                     "max_tokens": model_config.max_tokens,
-                    "stop_sequences": model_config.stop_sequences
+                    "stop_sequences": model_config.stop_sequences,
                 }
-                
+
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Error preparing request: {str(e)}")
 

@@ -1,10 +1,10 @@
-
 import re
-from config.aws_config import bedrock_client
-from api.models.kb_model_config import KBModelConfigs
-from typing import Dict, List, Optional
 from datetime import datetime, timedelta
-from config.aws_config import bedrock_agent, bedrock_agent_runtime_client
+from typing import Dict, List, Optional
+
+from api.models.kb_model_config import KBModelConfigs
+from config.aws_config import bedrock_agent, bedrock_agent_runtime_client, bedrock_client
+
 
 class KnowledgebaseService:
     @staticmethod
@@ -13,16 +13,16 @@ class KnowledgebaseService:
         try:
             # 1. Get models from AWS Bedrock
             response = bedrock_client.list_foundation_models()
-            
+
             # 2. Dictionary to track unique models
             unique_models = {}
-            
+
             # 3. Process each model from the response
-            for model in response.get('modelSummaries', []):
-                model_arn = model['modelArn']
-                
+            for model in response.get("modelSummaries", []):
+                model_arn = model["modelArn"]
+
                 # 4. Extract base ARN and token count
-                base_arn_match = re.match(r'(.+?:\d+):(\d+[kKmM]?)$', model_arn)
+                base_arn_match = re.match(r"(.+?:\d+):(\d+[kKmM]?)$", model_arn)
                 if base_arn_match:
                     base_arn = base_arn_match.group(1)
                     token_count = base_arn_match.group(2)
@@ -31,9 +31,9 @@ class KnowledgebaseService:
                     token_count = ""
 
                 # 5. Extract and format model name
-                match = re.search(r'foundation-model/([a-zA-Z0-9\-\.]+)', base_arn)
+                match = re.search(r"foundation-model/([a-zA-Z0-9\-\.]+)", base_arn)
                 model_name = match.group(1) if match else "Unknown"
-                model_prefix = model_name.split('.')[0] if model_name != "Unknown" else "Unknown"
+                model_prefix = model_name.split(".")[0] if model_name != "Unknown" else "Unknown"
                 formatted_name = model_name.replace("-", " ").replace(".", " ").title()
 
                 # 6. Create base model info dictionary
@@ -42,7 +42,7 @@ class KnowledgebaseService:
                     "model_max_token": token_count,
                     "model_name": formatted_name,
                     "model": model_prefix.capitalize(),
-                    "description": model.get('modelDescription', '')
+                    "description": model.get("modelDescription", ""),
                 }
 
                 # 7. Check if we've seen this base model before
@@ -50,19 +50,17 @@ class KnowledgebaseService:
                     # 8. Enrich with config and pricing using KBModelConfigs
                     enriched_model = KBModelConfigs.enrich_model_info(model_info)
                     unique_models[base_arn] = enriched_model
-                
+
             # 9. Return final results
             return {"models": list(unique_models.values())}
-            
+
         except Exception as e:
             print(f"Error in list_models: {str(e)}")
             raise
 
     @staticmethod
     def list_knowledgebases(
-        max_results: int = 10,
-        next_token: Optional[str] = None,
-        status_filter: str = "ACTIVE"
+        max_results: int = 10, next_token: Optional[str] = None, status_filter: str = "ACTIVE"
     ) -> Dict:
         """
         Get a list of active knowledge bases with mapped fields.
@@ -98,8 +96,16 @@ class KnowledgebaseService:
 
                 # Extract necessary fields
                 storage_config = kb_detail.get("storageConfiguration", {})
-                vector_field = storage_config.get("opensearchServerlessConfiguration", {}).get("fieldMapping", {}).get("vectorField")
-                description_field = storage_config.get("opensearchServerlessConfiguration", {}).get("fieldMapping", {}).get("metadataField")
+                vector_field = (
+                    storage_config.get("opensearchServerlessConfiguration", {})
+                    .get("fieldMapping", {})
+                    .get("vectorField")
+                )
+                description_field = (
+                    storage_config.get("opensearchServerlessConfiguration", {})
+                    .get("fieldMapping", {})
+                    .get("metadataField")
+                )
 
                 # Fetch data sources using `list_data_sources`
                 data_sources = []
@@ -108,14 +114,18 @@ class KnowledgebaseService:
                     print(f"Data sources response for KB {kb_id}: {data_sources_response}")
 
                     for ds in data_sources_response.get("dataSourceSummaries", []):
-                        data_sources.append({
-                            "data_source_id": ds.get("dataSourceId"),
-                            "knowledge_base_id": ds.get("knowledgeBaseId"),
-                            "name": ds.get("name"),
-                            "description": ds.get("description"),
-                            "status": ds.get("status"),
-                            "last_updated": ds.get("updatedAt").isoformat() if ds.get("updatedAt") else None,
-                        })
+                        data_sources.append(
+                            {
+                                "data_source_id": ds.get("dataSourceId"),
+                                "knowledge_base_id": ds.get("knowledgeBaseId"),
+                                "name": ds.get("name"),
+                                "description": ds.get("description"),
+                                "status": ds.get("status"),
+                                "last_updated": (
+                                    ds.get("updatedAt").isoformat() if ds.get("updatedAt") else None
+                                ),
+                            }
+                        )
                 except Exception as e:
                     print(f"Error getting data sources for KB {kb_id}: {str(e)}")
 
@@ -123,11 +133,17 @@ class KnowledgebaseService:
                 kb_info = {
                     "knowledge_base_id": kb_id,
                     "name": kb.get("name"),
-                    "description": kb_detail.get("description"),  
+                    "description": kb_detail.get("description"),
                     "status": kb.get("status"),
-                    "creation_time": kb_detail.get("createdAt").isoformat() if kb_detail.get("createdAt") else None,
-                    "last_updated_time": kb.get("updatedAt").isoformat() if kb.get("updatedAt") else None,
-                    "storage_capacity": kb_detail.get("storageConfiguration"),  
+                    "creation_time": (
+                        kb_detail.get("createdAt").isoformat()
+                        if kb_detail.get("createdAt")
+                        else None
+                    ),
+                    "last_updated_time": (
+                        kb.get("updatedAt").isoformat() if kb.get("updatedAt") else None
+                    ),
+                    "storage_capacity": kb_detail.get("storageConfiguration"),
                     "data_source_count": len(data_sources),
                     "vector_field": vector_field,
                     "description_field": description_field,
@@ -155,10 +171,10 @@ class KnowledgebaseService:
     def get_usage_stats(kb_id: str) -> Dict:
         """
         Get detailed usage statistics for a knowledgebase.
-        
+
         Args:
             kb_id (str): Knowledgebase ID
-            
+
         Returns:
             Dict containing usage statistics
         """
@@ -168,25 +184,21 @@ class KnowledgebaseService:
             start_time = end_time - timedelta(days=1)
 
             # Get knowledge base details
-            kb_details = bedrock_agent.get_knowledge_base(
-                knowledgeBaseId=kb_id
-            )
-            
+            kb_details = bedrock_agent.get_knowledge_base(knowledgeBaseId=kb_id)
+
             # Get associated data sources
-            data_sources = bedrock_agent.list_knowledge_base_data_sources(
-                knowledgeBaseId=kb_id
-            )
+            data_sources = bedrock_agent.list_knowledge_base_data_sources(knowledgeBaseId=kb_id)
 
             return {
-                "status": kb_details.get('status'),
-                "data_sources": len(data_sources.get('dataSourceSummaries', [])),
-                "last_updated": kb_details.get('lastUpdatedTime'),
+                "status": kb_details.get("status"),
+                "data_sources": len(data_sources.get("dataSourceSummaries", [])),
+                "last_updated": kb_details.get("lastUpdatedTime"),
                 "storage": {
-                    "capacity": kb_details.get('storageCapacity'),
-                    "used": kb_details.get('storageUsed', 0)
+                    "capacity": kb_details.get("storageCapacity"),
+                    "used": kb_details.get("storageUsed", 0),
                 },
                 "time_period": "24h",
-                "retrieved_at": end_time.isoformat()
+                "retrieved_at": end_time.isoformat(),
             }
 
         except Exception as e:
@@ -196,10 +208,7 @@ class KnowledgebaseService:
                 "error": str(e),
                 "data_sources": 0,
                 "last_updated": None,
-                "storage": {
-                    "capacity": 0,
-                    "used": 0
-                },
+                "storage": {"capacity": 0, "used": 0},
                 "time_period": "24h",
-                "retrieved_at": datetime.utcnow().isoformat()
+                "retrieved_at": datetime.utcnow().isoformat(),
             }

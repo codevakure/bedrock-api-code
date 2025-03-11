@@ -7,10 +7,10 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 
 from api.models.schema_models import (
+    ConnectionInfo,
+    SchemaDetailResponse,
     SchemaRequest,
     SchemaResponse,
-    ConnectionInfo,
-    SchemaDetailResponse
 )
 from services.database.schema_analyzer_service import SchemaAnalyzerService
 
@@ -18,6 +18,7 @@ from services.database.schema_analyzer_service import SchemaAnalyzerService
 schema_router = APIRouter(prefix="/schema", tags=["Database Schema"])
 
 schema_service = SchemaAnalyzerService()
+
 
 @schema_router.post("", response_model=SchemaResponse)
 async def extract_schema(request: SchemaRequest):
@@ -30,26 +31,25 @@ async def extract_schema(request: SchemaRequest):
             "port": request.connection_params.port,
             "user": request.connection_params.user,
             "password": request.connection_params.password,  # Explicitly get the password
-            "database": request.connection_params.database
+            "database": request.connection_params.database,
         }
-        
+
         # Log for debugging (redact in production)
         print(f"Connection params: {connection_params}")
-        
+
         # Extract schema using the service
         schema_info = schema_service.analyze_postgres_schema(
-            request.connection_id, 
-            connection_params
+            request.connection_id, connection_params
         )
-        
+
         if not schema_info:
             raise HTTPException(status_code=500, detail="Failed to extract schema information")
-            
+
         return {
             "connection_id": request.connection_id,
             "version": schema_info["metadata"]["created_at"],
             "tables_count": len(schema_info["tables"]),
-            "relationships_count": len(schema_info["relationships"])
+            "relationships_count": len(schema_info["relationships"]),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -75,7 +75,9 @@ async def get_schema(connection_id: str, version: Optional[str] = None):
     try:
         schema = schema_service.get_schema(connection_id, version)
         if not schema:
-            raise HTTPException(status_code=404, detail=f"Schema not found for connection {connection_id}")
+            raise HTTPException(
+                status_code=404, detail=f"Schema not found for connection {connection_id}"
+            )
         return schema
     except HTTPException:
         raise
@@ -91,7 +93,9 @@ async def delete_schema(connection_id: str, version: Optional[str] = None):
     try:
         success = schema_service.delete_schema(connection_id, version)
         if not success:
-            raise HTTPException(status_code=404, detail=f"Schema not found for connection {connection_id}")
+            raise HTTPException(
+                status_code=404, detail=f"Schema not found for connection {connection_id}"
+            )
         return {"message": f"Schema for connection {connection_id} deleted successfully"}
     except HTTPException:
         raise

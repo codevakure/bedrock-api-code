@@ -1,5 +1,6 @@
 import logging
 
+
 def setup_logging():
     """
     Sets up logging configuration for the application.
@@ -10,25 +11,25 @@ def setup_logging():
         logging.Logger: Configured logger instance for the application.
     """
     logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-    
+
     # Create logger
-    logger = logging.getLogger('bedrock-api')
+    logger = logging.getLogger("bedrock-api")
     logger.setLevel(logging.INFO)
-    
+
     # Create console handler
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
-    
+
     # Create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     ch.setFormatter(formatter)
-    
+
     # Add handler to logger
     logger.addHandler(ch)
-    
+
     return logger
+
 
 logger = setup_logging()

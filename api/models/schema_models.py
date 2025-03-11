@@ -2,12 +2,14 @@
 Schema-related data models for the API
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
 class DatabaseConnection(BaseModel):
     """Database connection parameters model"""
+
     host: str = Field(..., description="Database host address")
     port: int = Field(..., description="Database port")
     user: str = Field(..., description="Database username")
@@ -17,12 +19,14 @@ class DatabaseConnection(BaseModel):
 
 class SchemaRequest(BaseModel):
     """Request model for schema extraction"""
+
     connection_id: str = Field(..., description="Unique identifier for the database connection")
     connection_params: DatabaseConnection = Field(..., description="Database connection parameters")
 
 
 class SchemaResponse(BaseModel):
     """Response model after schema extraction"""
+
     connection_id: str = Field(..., description="Database connection identifier")
     version: str = Field(..., description="Schema version (timestamp)")
     tables_count: int = Field(..., description="Number of tables in the schema")
@@ -31,6 +35,7 @@ class SchemaResponse(BaseModel):
 
 class ColumnInfo(BaseModel):
     """Information about a database column"""
+
     column_name: str
     data_type: str
     is_nullable: bool
@@ -41,6 +46,7 @@ class ColumnInfo(BaseModel):
 
 class TableInfo(BaseModel):
     """Information about a database table"""
+
     table_name: str
     schema: str
     description: Optional[str] = None
@@ -49,6 +55,7 @@ class TableInfo(BaseModel):
 
 class RelationshipInfo(BaseModel):
     """Information about a relationship between tables"""
+
     source_table: str
     source_column: str
     target_table: str
@@ -59,6 +66,7 @@ class RelationshipInfo(BaseModel):
 
 class SchemaMetadata(BaseModel):
     """Metadata about the schema"""
+
     created_at: str
     db_version: Optional[str] = None
     db_type: str
@@ -67,6 +75,7 @@ class SchemaMetadata(BaseModel):
 
 class SchemaInfo(BaseModel):
     """Complete schema information model"""
+
     tables: List[TableInfo]
     relationships: List[RelationshipInfo]
     metadata: SchemaMetadata
@@ -74,6 +83,7 @@ class SchemaInfo(BaseModel):
 
 class SchemaDetailResponse(BaseModel):
     """Detailed schema information response"""
+
     connection_id: str
     version: str
     schema: SchemaInfo
@@ -82,6 +92,7 @@ class SchemaDetailResponse(BaseModel):
 
 class ConnectionInfo(BaseModel):
     """Basic information about a database connection"""
+
     connection_id: str
     db_name: str
     db_type: str
